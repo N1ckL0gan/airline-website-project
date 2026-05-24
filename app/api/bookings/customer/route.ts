@@ -1,20 +1,29 @@
 import { NextRequest, NextResponse } from "next/server";
-import Booking from "@/models/Booking";
 import { connectDB } from "@/lib/mongodb";
-import mongoose from "mongoose";
+import Booking from "@/models/Booking";
+import Flight from "@/models/Flight";
 
 export async function GET(request: NextRequest) {
-  await connectDB();
+  try {
+    await connectDB();
 
-  // Explicitly register Flight schema if not already registered
-  if (!mongoose.models.Flight) {
-    const { default: Flight } = await import("@/models/Flight");
+    const { searchParams } = new URL(request.url);
+    const email = searchParams.get("email");
+
+    const bookings = await Booking.find({ email }).lean();
+
+    // Manual join for each booking
+    const bookingsWithFlights = await Promise.all(
+      bookings.map(async (booking) => {
+        const flight = await Flight.findById(booking.flightId).lean();
+        return { ...booking, flightId: flight };
+      })
+    );
+
+    return NextResponse.json(bookingsWithFlights);
+
+  } catch (err) {
+    console.error("Customer route error:", err);
+    return NextResponse.json({ error: String(err) }, { status: 500 });
   }
-
-  const { searchParams } = new URL(request.url);
-  const email = searchParams.get("email");
-
-  const bookings = await Booking.find({ email }).populate("flightId");
-
-  return NextResponse.json(bookings);
 }
