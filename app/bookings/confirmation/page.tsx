@@ -1,3 +1,7 @@
+import { connectDB } from "@/lib/mongodb";
+import Booking from "@/models/Booking";
+import Flight from "@/models/Flight";
+
 export default async function ConfirmationPage({
   searchParams,
 }: {
@@ -6,32 +10,11 @@ export default async function ConfirmationPage({
   const params = await searchParams;
   const bookingReference = params.bookingReference;
 
-  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
+  await connectDB();
 
-  const response = await fetch(
-    `${baseUrl}/api/bookings/reference?bookingReference=${bookingReference}`,
-    { cache: "no-store" }
-  );
+  const booking = await Booking.findOne({ bookingReference }).lean() as any;
 
-  const text = await response.text();
-
-  let booking;
-  try {
-    booking = JSON.parse(text);
-  } catch (e) {
-    return (
-      <main style={{ padding: "80px", fontFamily: "ui-sans-serif, system-ui, sans-serif" }}>
-        <h1 style={{ marginBottom: "16px" }}>API Response Debug</h1>
-        <p style={{ marginBottom: "8px" }}>Status: {response.status}</p>
-        <p style={{ marginBottom: "16px" }}>bookingReference: {bookingReference}</p>
-        <pre style={{ background: "#f0f0f0", padding: "20px", borderRadius: "4px", whiteSpace: "pre-wrap" }}>
-          {text || "(empty response)"}
-        </pre>
-      </main>
-    );
-  }
-
-  if (!booking || booking.error) {
+  if (!booking) {
     return (
       <main style={{ background: "#f8f7f4", minHeight: "100vh", fontFamily: "ui-sans-serif, system-ui, sans-serif", display: "flex", alignItems: "center", justifyContent: "center" }}>
         <div style={{ textAlign: "center" }}>
@@ -45,8 +28,10 @@ export default async function ConfirmationPage({
     );
   }
 
-  const departure = new Date(booking.flightId.departureTime);
-  const arrival = new Date(booking.flightId.arrivalTime);
+  const flight = await Flight.findById(booking.flightId).lean() as any;
+
+  const departure = new Date(flight.departureTime);
+  const arrival = new Date(flight.arrivalTime);
 
   const formatTime = (d: Date) =>
     d.toLocaleTimeString("en-NZ", { hour: "2-digit", minute: "2-digit", hour12: true });
@@ -84,7 +69,7 @@ export default async function ConfirmationPage({
           <div style={{ display: "flex", alignItems: "center", gap: "24px", marginBottom: "40px" }}>
             <div>
               <p style={{ fontSize: "40px", fontWeight: 900, letterSpacing: "-0.02em", margin: 0, lineHeight: 1 }}>{formatTime(departure)}</p>
-              <p style={{ fontSize: "14px", color: "#888", margin: "6px 0 0" }}>{booking.flightId.departureAirport}</p>
+              <p style={{ fontSize: "14px", color: "#888", margin: "6px 0 0" }}>{flight.departureAirport}</p>
             </div>
             <div style={{ flex: 1 }}>
               <div style={{ height: "1px", background: "#d4d0c8", position: "relative" }}>
@@ -93,14 +78,14 @@ export default async function ConfirmationPage({
             </div>
             <div style={{ textAlign: "right" }}>
               <p style={{ fontSize: "40px", fontWeight: 900, letterSpacing: "-0.02em", margin: 0, lineHeight: 1 }}>{formatTime(arrival)}</p>
-              <p style={{ fontSize: "14px", color: "#888", margin: "6px 0 0" }}>{booking.flightId.arrivalAirport}</p>
+              <p style={{ fontSize: "14px", color: "#888", margin: "6px 0 0" }}>{flight.arrivalAirport}</p>
             </div>
           </div>
           <div style={{ display: "flex", gap: "2px" }}>
             {[
               { label: "Date", value: departure.toLocaleDateString("en-NZ", { weekday: "long", day: "numeric", month: "long", year: "numeric" }) },
-              { label: "Flight", value: booking.flightId.flightNumber },
-              { label: "Aircraft", value: booking.flightId.aircraft },
+              { label: "Flight", value: flight.flightNumber },
+              { label: "Aircraft", value: flight.aircraft },
             ].map((item) => (
               <div key={item.label} style={{ flex: 1, background: "#f8f7f4", padding: "20px 24px", borderRadius: "2px" }}>
                 <p style={{ fontSize: "11px", letterSpacing: "0.2em", textTransform: "uppercase", color: "#888", marginBottom: "6px" }}>{item.label}</p>
