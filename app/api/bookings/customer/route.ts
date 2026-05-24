@@ -3,11 +3,15 @@ import { NextRequest, NextResponse }
 
 import Booking from "@/models/Booking";
 
+import Flight from "@/models/Flight";
+
 import { connectDB } from "@/lib/mongodb";
 
 export async function GET(request: NextRequest) {
 
   await connectDB();
+
+  void Flight;
 
   const { searchParams } =
     new URL(request.url);
