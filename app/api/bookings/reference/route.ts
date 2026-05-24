@@ -1,13 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import Booking from "@/models/Booking";
-import Flight from "@/models/Flight";
 import { connectDB } from "@/lib/mongodb";
+import mongoose from "mongoose";
 
 export async function GET(request: NextRequest) {
   try {
     await connectDB();
 
-    void Flight;
+    if (!mongoose.models.Flight) {
+      await import("@/models/Flight");
+    }
 
     const { searchParams } = new URL(request.url);
     const bookingReference = searchParams.get("bookingReference");
